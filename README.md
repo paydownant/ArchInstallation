@@ -9,6 +9,8 @@ cfdisk /dev/nvme0n1
 | bios (tmp)  | dev/nvme0n1p1 | 1024.0KB |
 | efi         | dev/nvme0n1p2 | 550.0MB  |
 | root        | dev/nvme0n1p3 | Rest     |
+
+BIOS partition is temporary and will never be used
 #### 2. File system creation
 ```sh
 # BOOT
