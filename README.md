@@ -1,6 +1,6 @@
 ## Arch installation
 
-#### 1. Partition:
+### 1. Partition:
 ```sh
 cfdisk /dev/nvme0n1
 ```
@@ -11,14 +11,14 @@ cfdisk /dev/nvme0n1
 | root        | dev/nvme0n1p3 | Rest     |
 
 BIOS partition is temporary and will never be used
-#### 2. File system creation
+### 2. File system creation
 ```sh
 # BOOT
 mkfs.btrfs -L root -n 32k /dev/nvme0n1p3
 # EFI
 mkfs.fat -f 32 -L efi /dev/nvme0n1p1
 ```
-#### 3. Mount the file system
+### 3. Mount the file system
 ```sh
 # Mount to /mnt
 mount /dev/nvme0n1p3 /mnt
@@ -37,27 +37,29 @@ mount -o compress=zstd,subvol=@home /dev/nvme0n1p3 /mnt/home
 mkdir -p /mnt/efi
 mount /dev/nvme0n1p2 /mnt/efi
 ```
-#### 4. Install essential packages:
+### 4. Install essential packages:
 ```sh
-pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inootify-tools timeshift reflector efibootmgr vim networkmanager
+pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inootify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
 ```
-#### 5. Configure the system
+### 5. Configure the system
 ```sh
+# Generate
 genfstab -U /mnt >> /mnt/etc/fstab
+# Check
 cat /mnt/etc/fstab
 ```
 You can change contents of fstab for optimisation such as ``noatime`` options
-#### 6. Chroot
+### 6. Chroot
 ```sh
 arch-chroot /mnt
 ```
-#### 7. Timezone
+### 7. Timezone
 ```sh
 ln -sf /usr/share/zoneinfo/Australia/Melbourne /etc/localtime
 date
 hwclock --systohc
 ```
-#### 8. Localization
+### 8. Localization
 ```sh
 vim /etc/locale.gen
 ```
@@ -71,7 +73,7 @@ write ``LANG=en_US.UTF-8`` and save
 vim /etc/vconsole.conf
 ```
 write ``KEYMAP=us``
-#### 9. Hostname
+### 9. Hostname
 ```sh
 touch /etc/hostname
 vim /etc/hostname
@@ -91,38 +93,49 @@ Edit the file with:
 127.0.1.1 <your host name> such as Arch
 ```
 
-#### 10. Set root password
+### 10. Set root password
 ```sh
 passwd
 ```
-#### 11. Add user
+### 11. Add user
 ```sh
 useradd -m -G wheel -s /bin/bash "username"
 passwd "username"
 EDITOR=vim visudo
 ```
 Near the end of the file uncomment for wheel group users
-#### 12. Update
+### 12. Update
 ```sh
 su "username"
 sudo pacman -Syu
 exit
 ```
-#### 13. Enabling daemons
+### 13. Configure ZRAM (Optional)
+```sh
+# Zram setup this is not necessary unless you want to change zram size
+vim /etc/systemd/zram-generator.conf
+```
+You can edit the file:
+```sh
+[zram0]
+zram-size = ram / 2
+EOF
+```
+### 14. Enabling daemons
 ```sh
 systemctl enable NetworkManager
 ```
-#### 14. Bootloader
+### 15. Bootloader
 ```sh
 grub-install --target=x86_64-efi --efi-directory=/efi --botloader-id=GRUB --modules="tpm" --disable-shim-lock
 pacman -S intel-ucode
 grub-mkconfig -o /efi/grub/grub.cfg
 ```
-#### 15. Restrict /efi permissions
+### 16. Restrict /efi permissions
 ```sh
 chmod 700 /efi
 ```
-#### 16. Exit
+### 17. Exit
 ```sh
 exit
 umount -a
@@ -141,22 +154,22 @@ systemctl enable --now gdm.service
 
 
 ## Create Bootable Drive for UEFI Shell
-#### 1. Format the drive for fat32
+### 1. Format the drive for fat32
 ```
 mkfs.vfat -F32 /dev/"drive"
 ```
-#### 2. Mount
+### 2. Mount
 ```
 mkdir /media/usb
 mount /dev/"drive" /media/usb
 cd /media/usb
 ```
-#### 3. Make directory
+### 3. Make directory
 ```
 mkdir -p efi/boot/
 cd efi/boot/
 ```
-#### 4. Download shell
+### 4. Download shell
 ```
 sudo wget -q -O BOOTX64.efi https://github.com/tianocore/edk2/raw/edk2-stable201903/ShellBinPkg/UefiShell/X64/Shell.efi
 ```
