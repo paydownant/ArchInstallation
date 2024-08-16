@@ -94,7 +94,9 @@ reboot
 ## Gnome Installation
 ### 1. Installation
 ```
-sudo pacman -S xorg gnome gdm gnome-tweaks
+sudo pacman -S xorg xorg-server
+sudo pacman -S gnome gnome-tweaks
+sudo pacman -S gdm
 systemctl enable --now gdm.service
 ```
 
