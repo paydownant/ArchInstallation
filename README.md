@@ -39,7 +39,7 @@ mount /dev/nvme0n1p2 /mnt/efi
 ```
 ### 4. Install essential packages:
 ```sh
-pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inootify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
+pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inotify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
 ```
 ### 5. Configure the file system
 ```sh
