@@ -16,8 +16,10 @@ iso>> mount /dev/"root partition" /mnt
 iso>> mount /dev/"boot partition" /mnt/boot
 iso>> swapon /dev/"swap partition"
 
-4. Install essential packages
-iso>> pacstrap -K /mnt base linux linux-firmware sof-firmware base-devel grub efibootmgr vim networkmanager
+4. Install essential packages:
+```sh
+pacstrap -K /mnt base linux linux-firmware sof-firmware base-devel grub efibootmgr vim networkmanager
+```
 
 5. Configure the system
 iso>> genfstab -U /mnt >> /mnt/etc/fstab
@@ -45,7 +47,7 @@ root>> vim /etc/hostname
 Write "Surface"
 
 10. Set root password
-root>> passwd
+root>> ``passwd``
 
 11. Add user
 root>> useradd -m -G wheel -s /bin/bash "username"
