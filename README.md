@@ -137,6 +137,8 @@ EOF
 ### 14. Enabling daemons
 ```sh
 systemctl enable NetworkManager
+pacman -S bluez
+systemctl enable bluetooth
 ```
 ### 15. Bootloader
 ```sh
@@ -215,8 +217,7 @@ done
 ## Gnome Installation
 ### 1. Installation
 ```
-sudo pacman -S xorg xorg-server
-sudo pacman -S gnome gnome-tweaks
+sudo pacman -S xorg xorg-server gnome
 sudo pacman -S gdm
 systemctl enable --now gdm.service
 ```
