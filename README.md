@@ -29,9 +29,9 @@ btrfs subvolume create /mnt/@home
 umount /mnt
 
 # Mount the root and hoome subvolume
-mount -o compress=zstd,subvol=@ /dev/nvme0n1p3 /mnt
+mount -o noatime,space_cache=v2,ssd,compress=zstd,discard=async,subvol=@ /dev/nvme0n1p3 /mnt
 mkdir -p /mnt/home
-mount -o compress=zstd,subvol=@home /dev/nvme0n1p3 /mnt/home
+mount -o noatime,space_chache=v2,ssd,compress=zstd,discard=async,subvol=@home /dev/nvme0n1p3 /mnt/home
 
 # Mount the efi partition
 mkdir -p /mnt/efi
@@ -41,7 +41,7 @@ mount /dev/nvme0n1p2 /mnt/efi
 ```sh
 pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inootify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
 ```
-### 5. Configure the system
+### 5. Configure the file system
 ```sh
 # Generate
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -53,7 +53,20 @@ You can change contents of fstab for optimisation such as ``noatime`` options
 ```sh
 arch-chroot /mnt
 ```
-### 7. Timezone
+### 7. Configuring from installation
+File System Table
+```sh
+vim /etc/mkinitcpio.conf
+----------------------
+# Set
+MODULES=(btrfs)
+----------------------
+```
+Update initramfs
+```sh
+mkinitcpio -p linux
+```
+Time Zone
 ```sh
 ln -sf /usr/share/zoneinfo/Australia/Melbourne /etc/localtime
 date
@@ -141,7 +154,63 @@ exit
 umount -a
 reboot
 ```
+### 18. Configuring for SecureBoot
+```sh
+# Get prerequisite
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -si
 
+yay -S shim-signed
+sudo pacman -S sbsigntools
+```
+Go into root mode
+```sh
+# Copy to directory where your bootloader is located
+cp /usr/share/shim-signed/shimx64.efi /efi/EFI/shimx64.efi
+cp /usr/share/shim-signed/mmx64.efi /efi/EFI/
+
+# Create NVRAM entry to boot shim
+efibootmgr --unicode --disk /dev/nvme0n1 --part 2 --create --label "Shim" --loader /efi/EFI/shimx64.efi
+```
+You will need to create your own keys, sign the grub bootloader (not the shim) and the kernel, as well as enrol the key in MokManagement
+You must have your own MOK.key, MOK.crt, and MOK.cer. Each time kernel or grub is updated, they need to be signed using the keypair (.key and .crt).
+```sh
+# Generate key pair
+openssl req -newkey rsa:2048 -nodes -keyout MOK.key -new -x509 -sha256 -days 3650 -subj "/CN=my Machine Owner Key/" -out MOK.crt
+
+openssl x509 -outform DER -in MOK.crt -out MOK.cer
+
+# Copy cer to EFI so that you can enrol (you can also enrol using mokutil)
+cp MOK.cer /efi/
+
+# Sign your boot loader
+sbsign --key MOK.key --cert MOK.crt --output /efi/vmlinuz-linux /efi/vmlinuz-linux
+# Sign your kernel
+sbsign --key MOK.key --cert MOK.crt --output /efi/EFI/grubx64.efi /efi/EFI/grubx64.efi
+```
+
+Since having to sign each time they are updated is tedious, you can create executable to automate it:
+```sh
+/etc/initcpio/post/kernel-sbsign
+--------------------------------------------
+#!/usr/bin/env bash
+
+kernel="$1"
+[[ -n "$kernel" ]] || exit 0
+
+# use already install kernel if it exists
+[[ ! -f "$KERNELDESTINATION" ]] || kernel="$KERNELDESTINATION"
+
+keypairs=(/path/to/MOK.key /path/to/MOK.crt)
+
+for (( i=0; i<${#keypairs[@]}; i+=2 )) do
+    key="${keypairs[$i]}" cert="${keypairs[(( i + 1 ))]}"
+    if ! sbverify --cert "$cert" "$kernel" &> /dev/null; then
+        sbsign --key "$key" --cert "$cert" --output "$kernel" "$kernel"
+    fi
+done
+```
 
 ## Gnome Installation
 ### 1. Installation
