@@ -16,7 +16,7 @@ BIOS partition is temporary and will never be used
 # BOOT
 mkfs.btrfs -L root -n 32k /dev/nvme0n1p3
 # EFI
-mkfs.fat -f 32 -L efi /dev/nvme0n1p1
+mkfs.fat -f 32 -L efi /dev/nvme0n1p2
 ```
 ### 3. Mount the file system
 ```sh
