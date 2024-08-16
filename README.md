@@ -71,3 +71,22 @@ root>> grub-mkconfig -o /boot/grub/grub.cfg
 iso>> exit
 iso>> umount -a
 iso>> reboot
+
+
+Gnome Installation
+1.
+> sudo pacman -S xorg gnome gdm gnome-tweaks
+
+
+Create Bootable Drive for UEFI Shell
+1. Format the drive for fat32
+> mkfs.vfat -F32 /dev/"drive"
+2. Mount
+> mkdir /media/usb
+> mount /dev/"drive" /media/usb
+> cd /media/usb
+3. Make directory
+> mkdir -p efi/boot/
+> cd efi/boot/
+4. Download shell
+> sudo wget -q -O BOOTX64.efi https://github.com/tianocore/edk2/raw/edk2-stable201903/ShellBinPkg/UefiShell/X64/Shell.efi
