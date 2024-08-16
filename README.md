@@ -2,32 +2,49 @@
 
 #### 1. Partition:
 ```sh
-cfdisk /dev/"disk"
+cfdisk /dev/nvme0n1
 ```
-efi: "boot partition" 512MB<br>
-swap: "swap partition" 16GB<br>
-root: "root partition" rest<br>
+| Description |   Partition   |   Size   |
+| ----------- | ------------- | -------- |
+| bios (tmp)  | dev/nvme0n1p1 | 1024.0KB |
+| efi         | dev/nvme0n1p2 | 550.0MB  |
+| root        | dev/nvme0n1p3 | Rest     |
 #### 2. File system creation
 ```sh
-mkfs.btrfs -L "mylabel" -n 32k /dev/"root partition"
-mkfs.fat -f 32 -L "mylabel" /dev/"boot partition"
-mkswap /dev/"swap partition"
+# BOOT
+mkfs.btrfs -L root -n 32k /dev/nvme0n1p3
+# EFI
+mkfs.fat -f 32 -L efi /dev/nvme0n1p1
 ```
 #### 3. Mount the file system
 ```sh
-mount /dev/"root partition" /mnt
-mount /dev/"boot partition" /mnt/boot
-swapon /dev/"swap partition"
+# Mount to /mnt
+mount /dev/nvme0n1p3 /mnt
+# Create subvolumes
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+# Unmount /mnt
+umount /mnt
+
+# Mount the root and hoome subvolume
+mount -o compress=zstd,subvol=@ /dev/nvme0n1p3 /mnt
+mkdir -p /mnt/home
+mount -o compress=zstd,subvol=@home /dev/nvme0n1p3 /mnt/home
+
+# Mount the efi partition
+mkdir -p /mnt/efi
+mount /dev/nvme0n1p2 /mnt/efi
 ```
 #### 4. Install essential packages:
 ```sh
-pacstrap -K /mnt base linux linux-firmware sof-firmware base-devel grub efibootmgr vim networkmanager
+pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inootify-tools timeshift reflector efibootmgr vim networkmanager
 ```
 #### 5. Configure the system
 ```sh
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
+You can change contents of fstab for optimisation such as ``noatime`` options
 #### 6. Chroot
 ```sh
 arch-chroot /mnt
@@ -54,9 +71,24 @@ vim /etc/vconsole.conf
 write ``KEYMAP=us``
 #### 9. Hostname
 ```sh
+touch /etc/hostname
 vim /etc/hostname
 ```
-Write ``Surface``
+Edit the file with:
+```
+<hostname> such as Arch
+```
+```sh
+touch /etc/hosts
+vim /etc/hosts
+```
+Edit the file with:
+```
+127.0.0.1 localhost
+::1 localhost
+127.0.1.1 <your host name> such as Arch
+```
+
 #### 10. Set root password
 ```sh
 passwd
@@ -80,10 +112,15 @@ systemctl enable NetworkManager
 ```
 #### 14. Bootloader
 ```sh
-grub-install --target=x86_64-efi --efi-directory=/boot --botloader-id=GRUB --modules="tpm" --disable-shim-lock
-grub-mkconfig -o /boot/grub/grub.cfg
+grub-install --target=x86_64-efi --efi-directory=/efi --botloader-id=GRUB --modules="tpm" --disable-shim-lock
+pacman -S intel-ucode
+grub-mkconfig -o /efi/grub/grub.cfg
 ```
-#### 15. Exit
+#### 15. Restrict /efi permissions
+```sh
+chmod 700 /efi
+```
+#### 16. Exit
 ```sh
 exit
 umount -a
