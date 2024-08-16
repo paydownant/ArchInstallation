@@ -33,9 +33,9 @@ mount -o noatime,space_cache=v2,ssd,compress=zstd,discard=async,subvol=@ /dev/nv
 mkdir -p /mnt/home
 mount -o noatime,space_chache=v2,ssd,compress=zstd,discard=async,subvol=@home /dev/nvme0n1p3 /mnt/home
 
-# Mount the efi partition
-mkdir -p /mnt/efi
-mount /dev/nvme0n1p2 /mnt/efi
+# Mount the boot partition
+mkdir -p /mnt/boot
+mount /dev/nvme0n1p2 /mnt/boot
 ```
 ### 4. Install essential packages:
 ```sh
@@ -140,13 +140,13 @@ systemctl enable NetworkManager
 ```
 ### 15. Bootloader
 ```sh
-grub-install --target=x86_64-efi --efi-directory=/efi --botloader-id=GRUB --modules="tpm" --disable-shim-lock
+grub-install --target=x86_64-efi --efi-directory=/boot --botloader-id=GRUB --modules="tpm" --disable-shim-lock
 pacman -S intel-ucode
-grub-mkconfig -o /efi/grub/grub.cfg
+grub-mkconfig -o /boot/grub/grub.cfg
 ```
-### 16. Restrict /efi permissions
+### 16. Restrict /boot permissions
 ```sh
-chmod 700 /efi
+chmod 700 /boot
 ```
 ### 17. Exit
 ```sh
@@ -167,11 +167,11 @@ sudo pacman -S sbsigntools
 Go into root mode
 ```sh
 # Copy to directory where your bootloader is located
-cp /usr/share/shim-signed/shimx64.efi /efi/EFI/shimx64.efi
-cp /usr/share/shim-signed/mmx64.efi /efi/EFI/
+cp /usr/share/shim-signed/shimx64.efi /boot/EFI/shimx64.efi
+cp /usr/share/shim-signed/mmx64.efi /boot/EFI/
 
 # Create NVRAM entry to boot shim
-efibootmgr --unicode --disk /dev/nvme0n1 --part 2 --create --label "Shim" --loader /efi/EFI/shimx64.efi
+efibootmgr --unicode --disk /dev/nvme0n1 --part 2 --create --label "Shim" --loader /boot/EFI/shimx64.efi
 ```
 You will need to create your own keys, sign the grub bootloader (not the shim) and the kernel, as well as enrol the key in MokManagement
 You must have your own MOK.key, MOK.crt, and MOK.cer. Each time kernel or grub is updated, they need to be signed using the keypair (.key and .crt).
@@ -182,7 +182,7 @@ openssl req -newkey rsa:2048 -nodes -keyout MOK.key -new -x509 -sha256 -days 365
 openssl x509 -outform DER -in MOK.crt -out MOK.cer
 
 # Copy cer to EFI so that you can enrol (you can also enrol using mokutil)
-cp MOK.cer /efi/
+cp MOK.cer /boot/EFI/
 
 # Sign your boot loader
 sbsign --key MOK.key --cert MOK.crt --output /efi/vmlinuz-linux /efi/vmlinuz-linux
