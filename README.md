@@ -14,7 +14,7 @@ BIOS partition is temporary and will never be used
 ### 2. File system creation
 ```sh
 # BOOT
-mkfs.btrfs -L root -n 32k /dev/nvme0n1p3
+mkfs.btrfs -L Base -n 32k /dev/nvme0n1p3
 # EFI
 mkfs.fat -F 32 /dev/nvme0n1p2
 ```
@@ -25,21 +25,29 @@ mount /dev/nvme0n1p3 /mnt
 # Create subvolumes
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@snapshots
+btrfs subvolume create /mnt/@var_log
+
 # Unmount /mnt
 umount /mnt
 
-# Mount the root and hoome subvolume
+# Mount the root subvolume
 mount -o noatime,space_cache=v2,ssd,compress=zstd,discard=async,subvol=@ /dev/nvme0n1p3 /mnt
-mkdir -p /mnt/home
+# Create the directories
+mkdir -p /mnt/{boot,home,.snapshots,var_log}
+# Home subvolume
 mount -o noatime,space_chache=v2,ssd,compress=zstd,discard=async,subvol=@home /dev/nvme0n1p3 /mnt/home
+# And the rest of the subvolumes
+mount -o noatime,space_chache=v2,ssd,compress=zstd,discard=async,subvol=@snapshots /dev/nvme0n1p3 /mnt/.snapshots
+
+mount -o noatime,space_chache=v2,ssd,compress=zstd,discard=async,subvol=@var_log /dev/nvme0n1p3 /mnt/var_log
 
 # Mount the boot partition
-mkdir -p /mnt/boot
 mount /dev/nvme0n1p2 /mnt/boot
 ```
 ### 4. Install essential packages:
 ```sh
-pacstrap -K /mnt base linux linux-firmware sof-firmware git btrfs-progs base-devel grub grub-btrfs inotify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
+pacstrap -K /mnt base linux linux-firmware sof-firmware intel-ucode btrfs-progs base-devel grub grub-btrfs inotify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
 ```
 ### 5. Configure the file system
 ```sh
@@ -76,34 +84,44 @@ hwclock --systohc
 ```sh
 vim /etc/locale.gen
 ```
-go to en_US.UTF-8 UTF-8 and uncomment
-``locale-gen``
+go to en_US.UTF-8 UTF-8 and uncomment it then command
+```sh
+locale-gen
+```
+Write the locale config by
 ```sh
 vim /etc/locale.conf
 ```
-write ``LANG=en_US.UTF-8`` and save
+and writing 
+```sh
+LANG=en_US.UTF-8
+```
+Then set keymap by
 ```sh
 vim /etc/vconsole.conf
 ```
-write ``KEYMAP=us``
+and writing 
+```sh
+KEYMAP=us
+```
 ### 9. Hostname
 ```sh
-touch /etc/hostname
 vim /etc/hostname
 ```
 Edit the file with:
 ```
-<hostname> such as Arch
+archsurface
 ```
 ```sh
 touch /etc/hosts
 vim /etc/hosts
 ```
 Edit the file with:
-```
-127.0.0.1 localhost
-::1 localhost
-127.0.1.1 <your host name> such as Arch
+```sh
+### Add newline here ###
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   archsurface.localdomain archsurface
 ```
 
 ### 10. Set root password
@@ -123,38 +141,43 @@ su "username"
 sudo pacman -Syu
 exit
 ```
-### 13. Configure ZRAM (Optional)
-```sh
-# Zram setup this is not necessary unless you want to change zram size
-vim /etc/systemd/zram-generator.conf
-```
-You can edit the file:
-```sh
-[zram0]
-zram-size = ram / 2
-EOF
-```
-### 14. Enabling daemons
+### 13. Enabling daemons
 ```sh
 systemctl enable NetworkManager
 pacman -S bluez
 systemctl enable bluetooth
 ```
-### 15. Bootloader
+### 14. Bootloader
 ```sh
 grub-install --target=x86_64-efi --efi-directory=/boot --botloader-id=GRUB --modules="tpm" --disable-shim-lock
 pacman -S intel-ucode
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
-### 16. Restrict /boot permissions
+### 15. Restrict /boot permissions
 ```sh
 chmod 700 /boot
 ```
-### 17. Exit
+### 16. Exit
 ```sh
 exit
 umount -a
 reboot
+```
+### 17. Zram Configuration
+```sh
+sudo vim /etc/systemd/zram-generator.conf
+```
+You can edit the file:
+```sh
+[zram0]
+zram-size = min(ram, 8192)
+compression-algorithm = zstd
+```
+
+```sh
+# create new devices
+sudo systemctl daemon-reload
+sudo systemctl start /dev/zram0
 ```
 ### 18. Configuring for SecureBoot
 ```sh
@@ -219,7 +242,8 @@ done
 ```
 sudo pacman -S xorg xorg-server gnome
 sudo pacman -S gdm
-systemctl enable --now gdm.service
+pacman -Qs gdm
+sudo systemctl enable --now gdm.service
 ```
 
 
