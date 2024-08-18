@@ -237,6 +237,50 @@ for (( i=0; i<${#keypairs[@]}; i+=2 )) do
 done
 ```
 
+
+## Replace grub with systemd-boot
+### 1. Install systemd-boot as root:
+```sh
+bootctl install
+```
+### 2. Configure Loader File:
+```sh
+vim /boot/loader/loader.conf
+```
+Edit
+```sh
+========= loader.conf ==========
+#timeout 3
+default 43l34jkl32j4lk32
+```
+to
+```sh
+========= loader.conf ==========
+timeout 3
+default arch
+```
+### 3. Create arch.conf:
+```sh
+# Create
+vim /boot/loader/entries/arch.conf
+# Write:
+============== arch.conf ============
+title ArchLinux
+linux /vmlinuz-linux
+initrd /initramfs-linux.img
+options root=PARTUUID=YOUR-PARTUUID-HERE
+```
+You can get your PARTUUID by reading in blkid via vim
+```sh
+:r !blkid
+```
+### 4. Uninstall GRUB with:
+```sh
+pacman -Rcnsu grub
+```
+then reboot
+
+
 ## Gnome Installation
 ### 1. Installation
 ```sh
