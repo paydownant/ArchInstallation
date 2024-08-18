@@ -257,8 +257,10 @@ to
 ```sh
 ========= loader.conf ==========
 timeout 3
-default arch
+default arch.conf
+# you can also use default @ to save the default in boot
 ```
+`If you used timeout 0, you can access the menu by pressing space on boot`
 ### 3. Create arch.conf:
 ```sh
 # Create
@@ -268,13 +270,13 @@ vim /boot/loader/entries/arch.conf
 title ArchLinux
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
-options root=PARTUUID=YOUR-PARTUUID-HERE
+options root=UUID or /dev/nvme0n1p3
 ```
-You can get your PARTUUID by reading in blkid via vim
+You can get your UUID by reading in blkid via vim
 ```sh
 :r !blkid
 ```
-### 4. Uninstall GRUB with:
+### 4. Uninstall GRUB with (ONLY AFTER CONFIRMING BOOT!):
 ```sh
 pacman -Rcnsu grub
 ```
