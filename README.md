@@ -239,11 +239,27 @@ done
 
 ## Gnome Installation
 ### 1. Installation
-```
-sudo pacman -S xorg xorg-server gnome
+```sh
+sudo pacman -S xorg xorg-server
+sudo pacman -S gnome
 sudo pacman -S gdm
 pacman -Qs gdm
 sudo systemctl enable --now gdm.service
+```
+### 2. If encountered issue related to gnome
+```sh
+# Uninstall and reinstall
+PRESS fn + f3 to go into tty
+
+# Reinstall
+sudo pacman -Rns gnome
+sudo pacman -S gnome
+
+# Install extras
+sudo pacman -S gnome gnome-extra
+
+# Install intel graphics driver (Not necessary)
+sudo pacman -S xf86-video-intel
 ```
 
 
