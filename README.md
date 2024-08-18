@@ -47,7 +47,7 @@ mount /dev/nvme0n1p2 /mnt/boot
 ```
 ### 4. Install essential packages:
 ```sh
-pacstrap -K /mnt base linux linux-firmware sof-firmware intel-ucode btrfs-progs base-devel grub grub-btrfs inotify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
+pacstrap -K /mnt base linux linux-firmware sof-firmware intel-ucode btrfs-progs base-devel inotify-tools timeshift reflector efibootmgr vim networkmanager zram-generator
 ```
 ### 5. Configure the file system
 ```sh
@@ -88,12 +88,13 @@ go to en_US.UTF-8 UTF-8 and uncomment it then command
 ```sh
 locale-gen
 ```
-Write the locale config by
+Create the locale config by
 ```sh
 vim /etc/locale.conf
 ```
 and writing 
 ```sh
+================= /etc/locale.conf ===================
 LANG=en_US.UTF-8
 ```
 Then set keymap by
@@ -102,6 +103,7 @@ vim /etc/vconsole.conf
 ```
 and writing 
 ```sh
+================= /etc/vconsole.conf ===============
 KEYMAP=us
 ```
 ### 9. Hostname
@@ -109,7 +111,8 @@ KEYMAP=us
 vim /etc/hostname
 ```
 Edit the file with:
-```
+```sh
+================= /etc/hostname ====================
 archsurface
 ```
 ```sh
@@ -118,7 +121,7 @@ vim /etc/hosts
 ```
 Edit the file with:
 ```sh
-### Add newline here ###
+================= /etc/hosts =====================
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   archsurface.localdomain archsurface
@@ -146,11 +149,52 @@ exit
 systemctl enable NetworkManager
 pacman -S bluez
 systemctl enable bluetooth
+
+pacman -S intel-ucode
 ```
 ### 14. Bootloader
+#### A: Using systemd-boot (Recommended)
+A: 14.1 Create boot loader
 ```sh
+# bootctl --esp-path=/efi --boot-path=/boot install
+bootctl install
+```
+A: 14.2 Update loader config by
+```sh
+vim /boot/loader/loader.conf
+```
+and opening "loader.conf" to delete everything and write:
+```sh
+===================== loader.conf =======================
+timeout 0
+default linux.conf
+```
+A: 14.3 Create "linux.conf" entry
+```sh
+vim /boot/loader/etries/linux.conf
+```
+and write with your UUID
+```sh
+===================== linux.conf =======================
+title Linux
+linux /vmlinuz-linux
+initrd /initramfs-linux.img
+options root=UUID=.. rootflags=subvol=@ rw
+# You can get UUID by using vim command :r !blkid
+```
+A: 14.4 Run bootctl install again
+```sh
+bootctl install #(or update)
+
+systemctl enable systemd-boot-update.service # Automated update
+```
+#### B: Using GRUB
+```sh
+# Install grub
+pacman -S grub grub-btrfs
+# Create boot
 grub-install --target=x86_64-efi --efi-directory=/boot --botloader-id=GRUB --modules="tpm" --disable-shim-lock
-pacman -S intel-ucode
+# Config
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 ### 15. Restrict /boot permissions
@@ -180,6 +224,37 @@ sudo systemctl daemon-reload
 sudo systemctl start /dev/zram0
 ```
 ### 18. Configuring for SecureBoot
+#### A: Using systemd-boot + sbctl (recommended)
+A: 18.1 Install sbctl in root and check status
+```sh
+pacman -S sbctl
+sbctl status
+```
+A: 18.2 Create your key + enrol microsoft compatible key to UEFI
+```sh
+sbctl create-keys
+sbctl enroll-keys -m  # DO NOT FORGET -m OPTION!
+``` 
+A: 18.3 Check status again and check what files need to be signed
+```sh
+sbctl status
+sbctl verify
+```
+A: 18.3 Signing necessary files
+```sh
+# Sign kernels
+sbctl sign -s /boot/vmlinuz-linux
+..
+# Sign efi but instead of signing directly, sign ones in systemd-boot parent
+sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+# This way, when we run bootctl install again, signed efi will be created from .signed
+```
+A: 18.4 Update bootloaders
+```sh
+bootctl install
+```
+
+#### B: Using grub + shim-signed
 ```sh
 # Get prerequisite
 git clone https://aur.archlinux.org/yay.git
@@ -237,6 +312,34 @@ for (( i=0; i<${#keypairs[@]}; i+=2 )) do
 done
 ```
 
+-----------------------------------------
+
+## Gnome Installation
+### 1. Installation
+```sh
+sudo pacman -S xorg xorg-server
+sudo pacman -S gnome
+sudo pacman -S gdm
+pacman -Qs gdm
+sudo systemctl enable --now gdm.service
+```
+### 2. If encountered issue related to gnome
+```sh
+# Uninstall and reinstall
+PRESS fn + f3 to go into tty
+
+# Reinstall
+sudo pacman -Rns gnome
+sudo pacman -S gnome
+
+# Install extras
+sudo pacman -S gnome gnome-extra
+
+# Install intel graphics driver (Not necessary)
+sudo pacman -S xf86-video-intel
+```
+
+-----------------------------------------
 
 ## Replace grub with systemd-boot
 ### 1. Install systemd-boot as root:
@@ -287,32 +390,7 @@ then reboot
 bootctl remove
 ```
 
-
-## Gnome Installation
-### 1. Installation
-```sh
-sudo pacman -S xorg xorg-server
-sudo pacman -S gnome
-sudo pacman -S gdm
-pacman -Qs gdm
-sudo systemctl enable --now gdm.service
-```
-### 2. If encountered issue related to gnome
-```sh
-# Uninstall and reinstall
-PRESS fn + f3 to go into tty
-
-# Reinstall
-sudo pacman -Rns gnome
-sudo pacman -S gnome
-
-# Install extras
-sudo pacman -S gnome gnome-extra
-
-# Install intel graphics driver (Not necessary)
-sudo pacman -S xf86-video-intel
-```
-
+-----------------------------------------
 
 ## Create Bootable Drive for UEFI Shell
 ### 1. Format the drive for fat32
@@ -334,3 +412,4 @@ cd efi/boot/
 ```
 sudo wget -q -O BOOTX64.efi https://github.com/tianocore/edk2/raw/edk2-stable201903/ShellBinPkg/UefiShell/X64/Shell.efi
 ```
+-----------------------------------------
