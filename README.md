@@ -278,7 +278,12 @@ You can get your PARTUUID by reading in blkid via vim
 ```sh
 pacman -Rcnsu grub
 ```
+Remove contents in `/boot/grub`
 then reboot
+### # Removing systemd-boot if you like
+```sh
+bootctl remove
+```
 
 
 ## Gnome Installation
