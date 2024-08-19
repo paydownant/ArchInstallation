@@ -249,9 +249,13 @@ sbctl sign -s /boot/vmlinuz-linux
 sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
 # This way, when we run bootctl install again, signed efi will be created from .signed
 ```
-A: 18.4 Update bootloaders
+A: 18.4 Finishing
 ```sh
+# Update bootloaders
 bootctl install
+
+# Reboot (On Surface devices, do not change uefi mode as it will directly boot in secure boot mode)
+reboot
 ```
 
 #### B: Using grub + shim-signed
