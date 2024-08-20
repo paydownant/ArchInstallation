@@ -416,4 +416,18 @@ cd efi/boot/
 ```
 sudo wget -q -O BOOTX64.efi https://github.com/tianocore/edk2/raw/edk2-stable201903/ShellBinPkg/UefiShell/X64/Shell.efi
 ```
+
 -----------------------------------------
+
+## Add CPU Powermode Option
+```sh
+sudo pacman -S power-profiles-daemon
+
+# Setting performance mode
+powerctl set performance
+
+# Setting balanced mode
+powerctl set balance
+```
+
+----------------------------------------------
