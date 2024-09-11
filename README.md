@@ -13,7 +13,7 @@ cfdisk /dev/nvme0n1
 BIOS partition is temporary and will never be used
 ### 2. File system creation
 ```sh
-# BOOT
+# ROOT
 mkfs.btrfs -L Base -n 32k /dev/nvme0n1p3
 # EFI
 mkfs.fat -F 32 /dev/nvme0n1p2
